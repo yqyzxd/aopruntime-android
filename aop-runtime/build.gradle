@@ -1,0 +1,83 @@
+import org.aspectj.bridge.IMessage
+import org.aspectj.bridge.MessageHandler
+import org.aspectj.tools.ajc.Main
+
+apply plugin: 'com.android.library'
+apply plugin: 'com.github.dcendents.android-maven'
+group='com.github.yqyzxd'
+android {
+    compileSdkVersion 26
+
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 26
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+
+    android.libraryVariants.all { variant ->
+
+        JavaCompile javaCompile = variant.javaCompile
+        javaCompile.doLast {
+            String[] args = [
+                    "-showWeaveInfo",
+                    "-1.5",
+                    "-inpath", javaCompile.destinationDir.toString(),
+                    "-aspectpath", javaCompile.classpath.asPath,
+                    "-d", javaCompile.destinationDir.toString(),
+                    "-classpath", javaCompile.classpath.asPath,
+                    "-bootclasspath", android.bootClasspath.join(File.pathSeparator)
+            ]
+
+            MessageHandler handler = new MessageHandler(true);
+            new Main().run(args, handler)
+
+            def log = project.logger
+            for (IMessage message : handler.getMessages(null, true)) {
+                switch (message.getKind()) {
+                    case IMessage.ABORT:
+                    case IMessage.ERROR:
+                    case IMessage.FAIL:
+                        log.error message.message, message.thrown
+                        break;
+                    case IMessage.WARNING:
+                    case IMessage.INFO:
+                        log.info message.message, message.thrown
+                        break;
+                    case IMessage.DEBUG:
+                        log.debug message.message, message.thrown
+                        break;
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+   // api 'org.aspectj:aspectjrt:1.8.10'
+    api 'org.aspectj:aspectjrt:1.9.5'
+    //api project(':aop-annotations')
+    api 'com.github.yqyzxd:aopannotations-android:1.0.0'
+
+    compileOnly  'com.umeng.umsdk:common:9.3.8' // (必选)
+    compileOnly  'com.umeng.umsdk:asms:1.2.2' // asms包依赖(必选)
+   // implementation project(':umengsharelib')
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.13'
+   /* def aopRuntimeDependencies=rootProject.ext.aopRuntimeDependencies
+    aopRuntimeDependencies.each { k, v ->
+        implementation v
+    }*/
+    testImplementation 'junit:junit:4.12'
+
+}
